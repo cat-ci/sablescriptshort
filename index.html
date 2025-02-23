@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>SableScript</title>
+        
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+        
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+        
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.css">
+        <style>
+            html, body {
+                height: 100%;
+                margin: 0;
+                padding:0;
+                overflow: hidden;
+                font-family: sans-serif;
+            }
+            
+            #topbar {
+                height: 20px;
+                background: #282a36;
+                border-bottom: 1px solid rgba(248, 248, 242, 0.2);
+                display: flex;
+                color:rgba(248, 248, 242, 0.9);
+                align-items: center;
+                padding: 0 10px;
+                box-sizing: border-box;
+            }
+            #topbar span {
+                margin-right: 20px;
+            }
+            #container {
+                display: flex;
+                height: calc(100% - 20px);
+            }
+            .editor {
+                width: 50%;
+                height: 100%;
+                box-sizing: border-box;
+            }
+            .divider {
+                width: 1px;
+                background: #ccc;
+                cursor: col-resize;
+            }
+            .preview {
+                flex-grow: 1;
+                height: 100%;
+                box-sizing: border-box;
+            }
+            iframe {
+                width: 100%;
+                height: 100%;
+                border: none;
+            }
+            
+            .CodeMirror {
+                height: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        
+        <div id="topbar">
+            <div class="left">
+                <span id="filenameDisplay">document.html</span>
+                <span id="filesizeDisplay">Size: 0 bytes</span>
+            </div>
+            <div class="right">
+                <span id="timeDisplay">Time: --:--:--</span>
+                <span>SableScript version:0.2.1</span>
+            </div>
+
+        </div>
+        
+        <div class="container" id="container">
+            <div class="editor" id="editorPane">
+                <textarea id="code"></textarea>
+            </div>
+            <div class="divider" id="divider"></div>
+            <div class="preview" id="previewPane">
+                <iframe id="previewFrame"></iframe>
+            </div>
+        </div>
+
+        
+        <input type="file" id="fileInput" style="display:none" accept=".html,.htm,.txt,.css,.js">
+
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closetag.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.js"></script>
+
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/html-hint.min.js"></script>
+
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/search/searchcursor.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/search/search.min.js"></script>
+
+        <script>
+            
+            var languages = [
+                { mode: "htmlmixed", ext: "html" },
+                { mode: "css", ext: "css" },
+                { mode: "javascript", ext: "js" }
+            ];
+            
+            var currentLanguageIndex = parseInt(localStorage.getItem("docLanguageIndex")) || 0;
+            
+            var fileNameBase = localStorage.getItem("docFileName") || "document";
+
+            
+            function updateFilenameDisplay() {
+                var ext = languages[currentLanguageIndex].ext;
+                var fullName = fileNameBase + "." + ext;
+                document.getElementById("filenameDisplay").textContent = fullName;
+            }
+
+            
+            function updateFilesizeDisplay(content) {
+                var size = new Blob([content]).size;
+                document.getElementById("filesizeDisplay").textContent = "Size: " + size + " bytes";
+            }
+
+            
+            function updateTimeDisplay() {
+                var now = new Date();
+                document.getElementById("timeDisplay").textContent = "Time: " + now.toLocaleTimeString();
+            }
+            setInterval(updateTimeDisplay, 1000);
+
+            
+            var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+                mode: languages[currentLanguageIndex].mode,
+                theme: "dracula",
+                lineNumbers: true,
+                autoCloseTags: true,
+                autoCloseBrackets: true,
+                hintOptions: {
+                    completeSingle: false,
+                    hint: CodeMirror.hint.html
+                },
+                extraKeys: {
+                    "Ctrl-Space": "autocomplete",
+                    "Ctrl-F": "findPersistent",
+                    "Tab": function(cm) {
+                        var completion = cm.state.completionActive;
+                        if (completion) {
+                            completion.pick();
+                            return;
+                        }
+                        cm.execCommand(cm.options.indentWithTabs ? "insertTab" : "insertSoftTab");
+                    }
+                }
+            });
+            
+            editor.setSize("100%", "100%");
+
+            
+            var storedContent = localStorage.getItem("docContent");
+            if (storedContent) {
+                editor.setValue(storedContent);
+            }
+
+            
+            function updatePreview() {
+                var previewFrame = document.getElementById("previewFrame");
+                var preview = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                preview.open();
+                preview.write(editor.getValue());
+                preview.close();
+            }
+
+            
+            var timeout;
+            editor.on("change", function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(function() {
+                    var content = editor.getValue();
+                    localStorage.setItem("docContent", content);
+                    localStorage.setItem("docLanguageIndex", currentLanguageIndex);
+                    updateFilesizeDisplay(content);
+                    updatePreview();
+                }, 300);
+            });
+
+            
+            editor.on("inputRead", function(cm, change) {
+                if (!cm.state.completionActive) {
+                    var trigger = change.text[0];
+                    if (trigger && /[a-zA-Z<\/]/.test(trigger)) {
+                        CodeMirror.commands.autocomplete(cm, null, { completeSingle: false });
+                    }
+                }
+            });
+
+            
+            (function() {
+                var divider = document.getElementById("divider");
+                var container = document.getElementById("container");
+                var editorPane = document.getElementById("editorPane");
+                var previewPane = document.getElementById("previewPane");
+                var startX, startWidthEditor;
+
+                divider.addEventListener("mousedown", function(e) {
+                    startX = e.clientX;
+                    startWidthEditor = editorPane.offsetWidth;
+                    document.addEventListener("mousemove", onMouseMove);
+                    document.addEventListener("mouseup", onMouseUp);
+                });
+
+                function onMouseMove(e) {
+                    var dx = e.clientX - startX;
+                    var newEditorWidth = startWidthEditor + dx;
+                    var containerWidth = container.offsetWidth;
+                    if (newEditorWidth < 100) newEditorWidth = 100;
+                    if (containerWidth - newEditorWidth - divider.offsetWidth < 100) {
+                        newEditorWidth = containerWidth - divider.offsetWidth - 100;
+                    }
+                    editorPane.style.width = newEditorWidth + "px";
+                    previewPane.style.width = (containerWidth - newEditorWidth - divider.offsetWidth) + "px";
+                    editor.refresh();
+                }
+
+                function onMouseUp() {
+                    document.removeEventListener("mousemove", onMouseMove);
+                    document.removeEventListener("mouseup", onMouseUp);
+                }
+            })();
+
+            
+            
+            (function() {
+                var container = document.getElementById("container");
+                var editorPane = document.getElementById("editorPane");
+                var previewPane = document.getElementById("previewPane");
+                var divider = document.getElementById("divider");
+
+                document.addEventListener("keydown", function(e) {
+                    
+                    if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === "ArrowRight") {
+                        var newEditorWidth = editorPane.offsetWidth + 10;
+                        var containerWidth = container.offsetWidth;
+                        if (containerWidth - newEditorWidth - divider.offsetWidth < 100) {
+                            newEditorWidth = containerWidth - divider.offsetWidth - 100;
+                        }
+                        editorPane.style.width = newEditorWidth + "px";
+                        previewPane.style.width = (containerWidth - newEditorWidth - divider.offsetWidth) + "px";
+                        editor.refresh();
+                        e.preventDefault();
+                    }
+                    
+                    else if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === "ArrowLeft") {
+                        var newEditorWidth = editorPane.offsetWidth - 10;
+                        if (newEditorWidth < 100) newEditorWidth = 100;
+                        var containerWidth = container.offsetWidth;
+                        if (containerWidth - newEditorWidth - divider.offsetWidth < 100) {
+                            newEditorWidth = containerWidth - divider.offsetWidth - 100;
+                        }
+                        editorPane.style.width = newEditorWidth + "px";
+                        previewPane.style.width = (containerWidth - newEditorWidth - divider.offsetWidth) + "px";
+                        editor.refresh();
+                        e.preventDefault();
+                    }
+                    
+                    else if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "s") {
+                        e.preventDefault();
+                        var content = editor.getValue();
+                        var ext = languages[currentLanguageIndex].ext;
+                        var fullName = fileNameBase + "." + ext;
+                        var blob = new Blob([content], { type: "text/plain" });
+                        var a = document.createElement("a");
+                        a.href = URL.createObjectURL(blob);
+                        a.download = fullName;
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                    }
+                    
+                    else if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "r") {
+                        e.preventDefault();
+                        var miniWindow = window.open("", "MiniWindow", "width=400,height=300");
+                        miniWindow.document.open();
+                        miniWindow.document.write(editor.getValue());
+                        miniWindow.document.close();
+                    }
+                    
+                    else if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === "l") {
+                        e.preventDefault();
+                        document.getElementById("fileInput").click();
+                    }
+                    
+                    else if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "l") {
+                        e.preventDefault();
+                        currentLanguageIndex = (currentLanguageIndex + 1) % languages.length;
+                        var newMode = languages[currentLanguageIndex].mode;
+                        editor.setOption("mode", newMode);
+                        updateFilenameDisplay();
+                        localStorage.setItem("docLanguageIndex", currentLanguageIndex);
+                    }
+                    
+                    else if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === "e") {
+                        e.preventDefault();
+                        var newName = prompt("Enter new file name (without extension):", fileNameBase);
+                        if (newName !== null && newName.trim() !== "") {
+                            fileNameBase = newName.trim();
+                            updateFilenameDisplay();
+                            localStorage.setItem("docFileName", fileNameBase);
+                        }
+                    }
+                    
+                    else if (e.ctrlKey && e.altKey && !e.shiftKey && e.key.toLowerCase() === "c") {
+                        e.preventDefault();
+                        var content = editor.getValue();
+                        if (navigator.clipboard) {
+                            navigator.clipboard.writeText(content)
+                                .then(function() {
+                                alert("Document copied to clipboard!");
+                            })
+                                .catch(function(err) {
+                                alert("Error copying text: " + err);
+                            });
+                        } else {
+                            alert("Clipboard API not supported.");
+                        }
+                    }
+                    
+                    else if (e.ctrlKey && e.altKey && !e.shiftKey && e.key.toLowerCase() === "h") {
+                        e.preventDefault();
+                        if (previewPane.style.display === "none") {
+                            
+                            previewPane.style.display = "block";
+                            divider.style.display = "block";
+                            var containerWidth = container.offsetWidth;
+                            
+                            var newEditorWidth = Math.floor(containerWidth / 2);
+                            editorPane.style.width = newEditorWidth + "px";
+                            previewPane.style.width = (containerWidth - newEditorWidth - divider.offsetWidth) + "px";
+                        } else {
+                            previewPane.style.display = "none";
+                            divider.style.display = "none";
+                            editorPane.style.width = "100%";
+                        }
+                        editor.refresh();
+                    }
+                });
+
+                document.getElementById("fileInput").addEventListener("change", function(e) {
+                    var file = e.target.files[0];
+                    if (file) {
+                        var reader = new FileReader();
+                        reader.onload = function(evt) {
+                            editor.setValue(evt.target.result);
+                            updatePreview();
+                            updateFilesizeDisplay(editor.getValue());
+                        };
+                        reader.readAsText(file);
+                    }
+                });
+            })();
+            document.addEventListener("keydown", function (e) {
+                if (e.altKey && e.key.toLowerCase() === "q") {
+                    e.preventDefault();
+                    if (!editor) return;
+
+                    editor.operation(() => {
+                        let lines = [];
+                        for (let i = 0; i < editor.lineCount(); i++) {
+                            let line = editor.getLine(i).trim();
+                            lines.push(line);
+                        }
+
+                        let formattedCode = lines.join("\n");
+
+                        editor.replaceRange(formattedCode, { line: 0, ch: 0 }, { line: editor.lineCount(), ch: 0 });
+
+                        for (let i = 0; i < editor.lineCount(); i++) {
+                            editor.indentLine(i, "smart");
+                        }
+                    });
+                }
+            });
+
+            updateFilenameDisplay();
+            updateFilesizeDisplay(editor.getValue());
+            updateTimeDisplay();
+        </script>
+    </body>
+</html>
