@@ -1,5 +1,6 @@
 # SableScriptShort
 
+
 **SableScriptShort** is a keyboard-based text editor that simplifies your workflow by eliminating the need for a mouse. Enjoy a seamless editing experience with these powerful shortcuts:
 
 ## Keyboard Shortcuts
@@ -11,6 +12,9 @@
 - **Repair Indentation**: `Alt + Q`
 - **Hide Preview**: `Ctrl + Alt + H`
 - **Run in Mini Window**: `Ctrl + R`
+- **change preview window size left**: `Ctrl + Left`
+- **change preview window size right**: `Ctrl + right`
+
 
 ## Features
 
