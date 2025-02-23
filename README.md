@@ -13,6 +13,10 @@
 - **Repair Indentation**: `Alt + Q`
 - **Hide Preview**: `Ctrl + Alt + H`
 - **Run in Mini Window**: `Ctrl + R`
+- **copy current tab**: `Ctrl + alt + c`
+- **decrease font size**: `alt + -`
+- **increase font size**: `alt + + or = (for british keyboards)`
+- **change tab**: `alt + tab(number)`
 - **change preview window size left**: `Ctrl + Left`
 - **change preview window size right**: `Ctrl + right`
 
