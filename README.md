@@ -1,5 +1,6 @@
 # SableScriptShort
 
+ **saves to local storage**
 
 **SableScriptShort** is a keyboard-based text editor that simplifies your workflow by eliminating the need for a mouse. Enjoy a seamless editing experience with these powerful shortcuts:
 
